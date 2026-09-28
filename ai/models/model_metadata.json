@@ -1,0 +1,125 @@
+{
+  "model_name": "Random Forest Classifier",
+  "model_version": "1.0.0",
+  "algorithm": "sklearn.ensemble.RandomForestClassifier",
+  "parameters": {
+    "n_estimators": 100,
+    "max_depth": 12,
+    "class_weight": "balanced",
+    "random_state": 42
+  },
+  "training_date": "2026-09-28T07:08:18.512781+00:00",
+  "dataset_name": "blind_corner_traffic_dataset.csv",
+  "dataset_type": "Synthetic Kinematic Development Dataset",
+  "academic_disclaimer": "Academic decision-support prototype. Not certified for autonomous or real-world traffic control.",
+  "sample_counts": {
+    "total_samples": 4000,
+    "train_samples": 3200,
+    "test_samples": 800
+  },
+  "feature_columns": [
+    "distance_a_cm",
+    "distance_b_cm",
+    "speed_a_kmh",
+    "speed_b_kmh",
+    "vehicle_count_a",
+    "vehicle_count_b",
+    "total_vehicles",
+    "ttc_a_imputed",
+    "ttc_b_imputed",
+    "simultaneous_presence",
+    "simultaneous_approach",
+    "arrival_time_diff_imputed",
+    "density_encoded"
+  ],
+  "classes": [
+    "SAFE",
+    "CAUTION",
+    "HIGH_RISK",
+    "COLLISION_RISK"
+  ],
+  "metrics": {
+    "accuracy": 0.995,
+    "precision_macro": 0.995,
+    "recall_macro": 0.995,
+    "f1_macro": 0.995,
+    "precision_weighted": 0.995,
+    "recall_weighted": 0.995,
+    "f1_weighted": 0.995
+  },
+  "confusion_matrix": {
+    "labels": [
+      "SAFE",
+      "CAUTION",
+      "HIGH_RISK",
+      "COLLISION_RISK"
+    ],
+    "matrix": [
+      [
+        200,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        200,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        197,
+        1
+      ],
+      [
+        0,
+        0,
+        1,
+        199
+      ]
+    ]
+  },
+  "per_class_metrics": {
+    "SAFE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "support": 200
+    },
+    "CAUTION": {
+      "precision": 0.9901,
+      "recall": 1.0,
+      "f1_score": 0.995,
+      "support": 200
+    },
+    "HIGH_RISK": {
+      "precision": 0.9949,
+      "recall": 0.985,
+      "f1_score": 0.9899,
+      "support": 200
+    },
+    "COLLISION_RISK": {
+      "precision": 0.995,
+      "recall": 0.995,
+      "f1_score": 0.995,
+      "support": 200
+    }
+  },
+  "feature_importances": {
+    "arrival_time_diff_imputed": 0.2083,
+    "ttc_b_imputed": 0.1673,
+    "ttc_a_imputed": 0.1494,
+    "speed_a_kmh": 0.1182,
+    "distance_b_cm": 0.1071,
+    "speed_b_kmh": 0.1066,
+    "distance_a_cm": 0.0882,
+    "simultaneous_approach": 0.0279,
+    "simultaneous_presence": 0.0088,
+    "vehicle_count_a": 0.0064,
+    "total_vehicles": 0.0055,
+    "vehicle_count_b": 0.0042,
+    "density_encoded": 0.002
+  }
+}
