@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Shield,
   Sliders,
@@ -71,38 +71,100 @@ export const UnifiedSystemPage: React.FC<UnifiedSystemPageProps> = ({
 
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
-  // Sound Synthesizer using Web Audio API
-  const playAlertSound = (risk: string) => {
-    if (!soundEnabled) return;
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
+  // Active audio reference for clean stop/start control
+  const activeAudioRef = useRef<{ osc: OscillatorNode; ctx: AudioContext } | null>(null);
 
-      if (risk === "COLLISION_RISK") {
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // High pitch alarm
-        osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.3);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.3);
-      } else if (risk === "HIGH_RISK") {
-        osc.frequency.setValueAtTime(659, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.25);
-      } else if (risk === "CAUTION") {
-        osc.frequency.setValueAtTime(523, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.2);
+  const stopCurrentSound = () => {
+    try {
+      if (activeAudioRef.current) {
+        activeAudioRef.current.osc.stop();
+        activeAudioRef.current.ctx.close();
+        activeAudioRef.current = null;
       }
     } catch {
-      // AudioContext not allowed before user interaction
+      activeAudioRef.current = null;
+    }
+  };
+
+  // Sound Synthesizer using Web Audio API
+  const playAlertSound = (risk: string, forcePlay: boolean = false) => {
+    if (!soundEnabled && !forcePlay) return;
+    try {
+      stopCurrentSound();
+
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtxClass) return;
+      const audioCtx = new AudioCtxClass();
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      if (risk === "COLLISION_RISK") {
+        // Sustained Long Emergency Buzzer Beep (2000Hz piercing collision warning for 1.8s)
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        // Authentic 2000Hz hardware buzzer timbre matching "BUZZER ACTIVE (2000Hz)" badge
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(2000, audioCtx.currentTime);
+
+        // Immediate solid attack, steady long beep sustain for 1.5s, clean release at 1.8s
+        gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.28, audioCtx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.28, audioCtx.currentTime + 1.5);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.8);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 1.8);
+
+        activeAudioRef.current = { osc, ctx: audioCtx };
+        osc.onended = () => {
+          if (activeAudioRef.current?.osc === osc) {
+            activeAudioRef.current = null;
+          }
+        };
+      } else if (risk === "HIGH_RISK") {
+        // Warning tone (650Hz, 0.5s)
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(650, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } else if (risk === "CAUTION") {
+        // Caution chime (523Hz, 0.25s)
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      }
+    } catch (e) {
+      console.warn("AudioContext error:", e);
+    }
+  };
+
+  // Sound toggle handler with immediate alert trigger
+  const handleToggleSound = () => {
+    const nextState = !soundEnabled;
+    setSoundEnabled(nextState);
+    if (nextState) {
+      // User turned Sound ON: immediately trigger alert for current evaluated risk
+      playAlertSound(currentRisk, true);
+    } else {
+      stopCurrentSound();
     }
   };
 
@@ -699,7 +761,7 @@ export const UnifiedSystemPage: React.FC<UnifiedSystemPageProps> = ({
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  onClick={handleToggleSound}
                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
                     soundEnabled
                       ? "bg-cyan-950 text-cyan-300 border-cyan-500/50"
